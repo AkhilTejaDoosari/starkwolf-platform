@@ -49,3 +49,6 @@ logs/
 # Generated Prometheus/node_exporter runtime metrics
 monitoring/node-exporter/textfile/
 *.prom
+
+# Generated validation/audit reports
+/reports/
