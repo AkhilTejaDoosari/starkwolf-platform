@@ -1,0 +1,81 @@
+STARKWOLF AUDIT v2.1.0
+Generated: 2026-08-30T15:26:24+00:00
+Host: starkwolf
+Mode: read-only
+
+HEALTH: 100/100
+RESULT: RELEASE_READY
+
+CRITICAL: 0
+ACTION REQUIRED: 0
+MAINTENANCE: 7
+ACCEPTED / KNOWN: 9
+PASSES: 28
+
+CRITICAL FINDINGS
+  (none)
+
+ACTION REQUIRED
+  (none)
+
+MAINTENANCE / V2 BACKLOG
+  - jellyfin currently uses mutable image tag jellyfin/jellyfin:latest; review pinning policy in Starkwolf v2.
+  - navidrome currently uses mutable image tag deluan/navidrome:latest; review pinning policy in Starkwolf v2.
+  - vaultwarden currently uses mutable image tag vaultwarden/server:latest; review pinning policy in Starkwolf v2.
+  - pihole currently uses mutable image tag pihole/pihole:latest; review pinning policy in Starkwolf v2.
+  - Historical retired PDF certificate/config artifacts remain on disk; inactive evidence only, cleanup deferred.
+  - 4 dangling Docker image(s) retained; no automatic prune.
+  - 11 dangling Docker volume(s) retained; no automatic prune.
+
+ACCEPTED / KNOWN
+  - Caddy TCP 80/443 public ingress is intentional.
+  - Tailscale remains the steady-state private management-access plane.
+  - Immich PostgreSQL and Valkey are dependency components and are not compared to the Immich application tag.
+  - Backup passphrase remains on the production host; independent recovery copy remains a v2 hardening item.
+  - Isolated Immich PostgreSQL restore and encrypted-backup recovery were previously validated.
+  - Production automatic mutation through Watchtower has been retired.
+  - Renovate is the Git-based dependency proposal mechanism.
+  - Application/TLS private-key files under Caddy, Vaultwarden and Pi-hole are expected runtime secret material and are excluded from public Git.
+  - Retired Portainer data is preserved solely as rollback/history and is not an active service.
+
+PASSES
+  - Root filesystem usage 37% has healthy headroom.
+  - Zero failed systemd units.
+  - Production Compose configuration validates.
+  - Exact frozen 15-service architecture is configured.
+  - All exact 15 Starkwolf services are running.
+  - No unhealthy containers.
+  - No restarting containers.
+  - All retired runtime services remain absent.
+  - No unexpected public Docker port exposure; Caddy remains approved ingress.
+  - Immich application components are coordinated on v3.1.0.
+  - Prometheus configuration validates.
+  - Prometheus alert rules validate.
+  - Exactly 6 production alert rules are configured.
+  - Alertmanager is running.
+  - Latest encrypted local backup is fresh (13h).
+  - Local encrypted backup retention is exactly 7.
+  - pCloud off-site mount is active.
+  - Backup passphrase permissions are root:root 600.
+  - Update checker syntax validates.
+  - Update checker contains no retired-service references.
+  - Git source-of-truth working tree is clean.
+  - Local main matches origin/main.
+  - GitHub Actions is green for current commit.
+  - Terraform format and validation pass.
+  - Ansible syntax validation passes.
+  - Renovate configuration JSON is structurally valid.
+  - Gitleaks repository-history scan is clean.
+  - Runtime and secret material remain excluded from Git.
+
+PROVEN EXTERNAL CHECKPOINT
+  - Hetzner Terraform provider-backed plan: 2 add, 0 change, 0 destroy.
+  - No Terraform apply was performed for v1.
+
+GUARDRAILS
+  - No containers recreated.
+  - No images or volumes deleted.
+  - No credentials rotated or printed.
+  - No firewall/network rules changed.
+  - No Terraform apply executed.
+  - No Ansible production execution performed.
