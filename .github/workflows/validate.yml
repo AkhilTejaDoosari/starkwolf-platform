@@ -30,6 +30,13 @@ jobs:
             bash -n "$file"
           done
 
+      - name: Install Ansible
+        run: python3 -m pip install --user ansible-core
+
+      - name: Validate Ansible syntax
+        working-directory: ansible
+        run: ansible-playbook --syntax-check playbook.yml
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -41,3 +48,7 @@ jobs:
 
       - name: Terraform validation
         run: terraform -chdir=terraform validate
+
+      - name: Validate Renovate configuration
+        run: npx --yes --package renovate -- renovate-config-validator --strict
+

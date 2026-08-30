@@ -1,9 +1,10 @@
 ---
-- name: Configure Starkwolf host
-  hosts: starkwolf
+- name: Bootstrap Starkwolf Docker host
+  hosts: starkwolf_hosts
   become: true
 
   vars:
+    starkwolf_user: starkwolf
     starkwolf_root: /opt/starkwolf
 
   tasks:
@@ -16,10 +17,27 @@
           - git
           - jq
           - rsync
+          - docker.io
+          - docker-compose-v2
         state: present
         update_cache: true
+        cache_valid_time: 3600
 
-    - name: Ensure Starkwolf root exists
+    - name: Ensure Docker is enabled and running
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Ensure Starkwolf user exists
+      ansible.builtin.user:
+        name: "{{ starkwolf_user }}"
+        shell: /bin/bash
+        groups: docker
+        append: true
+        state: present
+
+    - name: Ensure Starkwolf root directory exists
       ansible.builtin.file:
         path: "{{ starkwolf_root }}"
         state: directory
@@ -27,7 +45,12 @@
         group: root
         mode: "0755"
 
-    - name: Verify Docker is available
+    - name: Verify Docker
       ansible.builtin.command:
         cmd: docker version
+      changed_when: false
+
+    - name: Verify Docker Compose
+      ansible.builtin.command:
+        cmd: docker compose version
       changed_when: false
