@@ -30,6 +30,9 @@ jobs:
             bash -n "$file"
           done
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
       - name: Terraform formatting
         run: terraform -chdir=terraform fmt -check -recursive
 
