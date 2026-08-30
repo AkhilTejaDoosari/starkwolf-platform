@@ -1,0 +1,236 @@
+networks:
+  public-gateway:
+    driver: bridge
+  private-secure:
+    driver: bridge
+
+services:
+
+  caddy:
+    image: caddy-duckdns:local
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /opt/starkwolf/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /opt/starkwolf/caddy:/data
+      - /opt/starkwolf/caddy-logs:/var/log/caddy
+    networks:
+      - public-gateway
+      - private-secure
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - /opt/starkwolf/jellyfin:/config
+      - ${PCLOUD_MOUNT}:/media:ro,rshared
+    networks:
+      - public-gateway
+  immich-postgres:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+    container_name: immich-postgres
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      - TZ=${TZ}
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_DATABASE_NAME}
+    volumes:
+      - /opt/starkwolf/immich-postgres:/var/lib/postgresql/data
+    networks:
+      - private-secure
+  immich-redis:
+    image: docker.io/valkey/valkey:9@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
+    container_name: immich-redis
+    restart: unless-stopped
+    networks:
+      - private-secure
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION}
+    container_name: immich-server
+    restart: unless-stopped
+    ports:
+      - "${SERVER_TAILSCALE_IP}:2283:2283"
+    environment:
+      - TZ=${TZ}
+      - DB_HOSTNAME=${DB_HOSTNAME}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_DATABASE_NAME=${DB_DATABASE_NAME}
+      - JWT_SECRET=${JWT_SECRET}
+      - REDIS_HOSTNAME=immich-redis
+    volumes:
+      - /opt/starkwolf/immich-ts:/usr/src/app/upload
+      - ${PCLOUD_MOUNT}/01. media/photos:/external-library:ro,rshared
+    networks:
+      - private-secure
+    depends_on:
+      immich-postgres:
+        condition: service_healthy
+      immich-redis:
+        condition: service_started
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION}
+    container_name: immich-machine-learning
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - /opt/starkwolf/immich-ts:/cache
+    networks:
+      - private-secure
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 3G
+    depends_on:
+      immich-postgres:
+        condition: service_healthy
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - /opt/starkwolf/pihole:/etc/pihole
+    ports:
+      - "${SERVER_TAILSCALE_IP}:53:53/tcp"
+      - "${SERVER_TAILSCALE_IP}:53:53/udp"
+      - "${SERVER_TAILSCALE_IP}:8080:80/tcp"
+    networks:
+      - private-secure
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    restart: unless-stopped
+    user: "0:0"
+    environment:
+      - TZ=${TZ}
+      - ND_SCANSCHEDULE=1h
+      - ND_LOGLEVEL=info
+      - ND_SESSIONTIMEOUT=24h
+      - ND_BASEURL=
+      - ND_TRANSCODINGCACHESIZE=0
+      - ND_ENABLETRANSCODINGCONFIG=false
+    volumes:
+      - /opt/starkwolf/navidrome:/data
+      - ${PCLOUD_MOUNT}/01. media/music:/music:ro,rshared
+    networks:
+      - public-gateway
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - DOMAIN=https://starkwolf-vault.duckdns.org
+      - SIGNUPS_ALLOWED=false
+      - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN}
+      - IP_HEADER=X-Forwarded-For
+    volumes:
+      - /opt/starkwolf/vaultwarden:/data
+    networks:
+      - public-gateway
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    volumes:
+      - /opt/starkwolf/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - /opt/starkwolf/monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "${SERVER_TAILSCALE_IP}:9090:9090"
+    networks:
+      - private-secure
+  grafana:
+    image: grafana/grafana:13.2.0
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - /opt/starkwolf/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "${SERVER_TAILSCALE_IP}:3000:3000"
+    networks:
+      - private-secure
+    depends_on:
+      - prometheus
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    container_name: node-exporter
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+      - --collector.textfile.directory=/textfile
+    volumes:
+      - /:/host:ro,rslave
+      - /opt/starkwolf/monitoring/node-exporter/textfile:/textfile:ro
+    networks:
+      - private-secure
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.60.5
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    networks:
+      - private-secure
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.28.0
+    container_name: blackbox-exporter
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/blackbox_exporter/config.yml
+    volumes:
+      - /opt/starkwolf/monitoring/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    networks:
+      - private-secure
+  alertmanager:
+    image: prom/alertmanager:v0.33.1
+    container_name: alertmanager
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.listen-address=0.0.0.0:9093
+    ports:
+      - "${SERVER_TAILSCALE_IP}:9093:9093"
+    volumes:
+      - /opt/starkwolf/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - /opt/starkwolf/monitoring/alertmanager/secrets/smtp-password:/run/secrets/smtp-password:ro
+      - /opt/starkwolf/monitoring/alertmanager/data:/alertmanager
+    networks:
+      - private-secure
+volumes:
+  prometheus_data:
+  grafana_data:

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "dependencyDashboard": true,
+  "docker-compose": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "description": "Never independently update Immich release dependencies",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/immich-app/postgres",
+        "docker.io/valkey/valkey",
+        "valkey/valkey"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Local Caddy build is not a registry dependency",
+      "matchPackageNames": [
+        "caddy-duckdns"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Group Prometheus observability updates",
+      "matchPackageNames": [
+        "prom/prometheus",
+        "grafana/grafana",
+        "prom/alertmanager",
+        "prom/node-exporter",
+        "prom/blackbox-exporter",
+        "ghcr.io/google/cadvisor"
+      ],
+      "groupName": "observability stack"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+server_type      = "REPLACE_WITH_CURRENT_SERVER_TYPE"
+location         = "REPLACE_WITH_HETZNER_LOCATION"
+ssh_key_name     = "REPLACE_WITH_HETZNER_SSH_KEY_NAME"
+ssh_allowed_cidr = "REPLACE_WITH_BOOTSTRAP_CIDR"

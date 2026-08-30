@@ -1,0 +1,33 @@
+---
+- name: Configure Starkwolf host
+  hosts: starkwolf
+  become: true
+
+  vars:
+    starkwolf_root: /opt/starkwolf
+
+  tasks:
+    - name: Install required base packages
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - git
+          - jq
+          - rsync
+        state: present
+        update_cache: true
+
+    - name: Ensure Starkwolf root exists
+      ansible.builtin.file:
+        path: "{{ starkwolf_root }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Verify Docker is available
+      ansible.builtin.command:
+        cmd: docker version
+      changed_when: false

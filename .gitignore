@@ -1,0 +1,51 @@
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.ci
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*secret*
+*token*
+credentials*
+
+# Terraform state
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
+
+# Ansible secrets
+ansible/inventory/hosts.ini
+ansible/group_vars/*vault*
+*.vault
+
+# Runtime/application state
+data/
+storage/
+cache/
+backups/
+backup/
+rollback/
+logs/
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.tar
+*.tar.gz
+*.gpg
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Generated Prometheus/node_exporter runtime metrics
+monitoring/node-exporter/textfile/
+*.prom

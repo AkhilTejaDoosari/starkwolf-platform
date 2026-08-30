@@ -1,0 +1,73 @@
+groups:
+  - name: starkwolf-host
+    rules:
+      - alert: StarkwolfRootDiskHigh
+        expr: |
+          (
+            1 -
+            (
+              node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay"}
+              /
+              node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay"}
+            )
+          ) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Starkwolf root disk above 85%"
+          description: "Root filesystem usage has remained above 85% for 10 minutes."
+
+      - alert: StarkwolfMemoryPressure
+        expr: |
+          (
+            node_memory_MemAvailable_bytes
+            /
+            node_memory_MemTotal_bytes
+          ) * 100 < 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Starkwolf available memory below 10%"
+          description: "Available memory has remained below 10% for 10 minutes."
+
+  - name: starkwolf-services
+    rules:
+      - alert: StarkwolfPrometheusTargetDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus target down"
+          description: "{{ $labels.job }} / {{ $labels.instance }} has been down for 5 minutes."
+
+      - alert: StarkwolfServiceProbeFailed
+        expr: probe_success == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Starkwolf service probe failed"
+          description: "{{ $labels.instance }} has failed probing for 2 minutes."
+
+  - name: starkwolf-backups
+    rules:
+      - alert: StarkwolfBackupMissing
+        expr: absent(starkwolf_backup_present) or starkwolf_backup_present == 0
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Starkwolf encrypted backup missing"
+          description: "Monitoring cannot confirm the presence of an encrypted Starkwolf backup."
+
+      - alert: StarkwolfBackupStale
+        expr: time() - starkwolf_backup_last_success_unixtime > 93600
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Starkwolf encrypted backup stale"
+          description: "Newest encrypted Starkwolf backup is more than 26 hours old."

@@ -1,0 +1,40 @@
+name: Validate Starkwolf
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose
+        working-directory: docker
+        run: docker compose --env-file ../.env.ci config -q
+
+      - name: Shell syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          find scripts -type f -name '*.sh' -print0 |
+          while IFS= read -r -d '' file; do
+            bash -n "$file"
+          done
+
+      - name: Terraform formatting
+        run: terraform -chdir=terraform fmt -check -recursive
+
+      - name: Terraform initialization
+        run: terraform -chdir=terraform init -backend=false
+
+      - name: Terraform validation
+        run: terraform -chdir=terraform validate
