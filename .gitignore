@@ -16,7 +16,6 @@ credentials*
 *.tfstate
 *.tfstate.*
 .terraform/
-.terraform.lock.hcl
 crash.log
 
 # Ansible secrets
